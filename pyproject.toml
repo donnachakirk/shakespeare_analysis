@@ -1,0 +1,23 @@
+[project]
+name = "shakespeare-geo"
+version = "0.1.0"
+description = "Placename extraction and mapping for Shakespeare plays"
+readme = "README.md"
+requires-python = ">=3.10"
+
+dependencies = [
+  "langextract[openai]>=0.1.2",
+  "requests>=2.31.0",
+  "pandas>=2.2.0",
+  "tqdm>=4.66.0",
+  "folium>=0.16.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "python-dotenv>=1.0.0",
+  "pytest>=8.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

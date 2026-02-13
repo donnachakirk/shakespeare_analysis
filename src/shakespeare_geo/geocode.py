@@ -37,6 +37,7 @@ def geocode_place(
     params = {
         "q": query,
         "format": "jsonv2",
+        "addressdetails": 1,
         "limit": 1,
     }
     if email:
@@ -62,6 +63,7 @@ def geocode_place(
         "geocode_lat": float(item["lat"]),
         "geocode_lon": float(item["lon"]),
         "geocode_precision": item.get("type"),
+        "geocode_addresstype": item.get("addresstype"),
         "geocode_class": item.get("class"),
         "geocode_id": f"{item.get('osm_type')}:{item.get('osm_id')}",
     }

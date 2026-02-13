@@ -7,16 +7,22 @@ import langextract as lx
 
 
 PROMPT = """
-Extract all geographic place names mentioned in the play.
-- Use the exact text span from the source.
-- Only include real-world geographic places (cities, regions, countries, landmarks).
-- Exclude people, buildings, organizations, and fictional institutions.
-- Return results in order of appearance.
+Extract only real-world settlement placenames from the play.
+
+Rules:
+- Keep only settlement places: city, town, village, hamlet, municipality.
+- Do not extract countries, regions, continents, landmarks, monuments, buildings, organizations, people, or deities.
+- Do not extract character names such as Friar John.
+- Do not extract deity references such as God.
+- Do not extract landmark phrases such as Capel's monument.
+- Use exact source spans and preserve appearance order.
 
 For each extraction, include attributes:
 - normalized_place: canonical place name
-- place_type: city | region | country | landmark | other
-- is_fictional: true | false
+- entity_kind: place | person | deity | organization | other
+- place_granularity: city | town | village | hamlet | municipality | country | region | landmark | building | other
+- is_real_world: true | false
+- should_keep: true | false
 """.strip()
 
 
@@ -30,8 +36,10 @@ def build_examples() -> List[lx.data.ExampleData]:
                     extraction_text="Verona",
                     attributes={
                         "normalized_place": "Verona",
-                        "place_type": "city",
-                        "is_fictional": "false",
+                        "entity_kind": "place",
+                        "place_granularity": "city",
+                        "is_real_world": "true",
+                        "should_keep": "true",
                     },
                 ),
                 lx.data.Extraction(
@@ -39,31 +47,74 @@ def build_examples() -> List[lx.data.ExampleData]:
                     extraction_text="Mantua",
                     attributes={
                         "normalized_place": "Mantua",
-                        "place_type": "city",
-                        "is_fictional": "false",
+                        "entity_kind": "place",
+                        "place_granularity": "city",
+                        "is_real_world": "true",
+                        "should_keep": "true",
                     },
                 ),
             ],
         ),
         lx.data.ExampleData(
-            text="I have been in Rome and all of Italy besides.",
+            text="Friar John carried letters to Verona.",
+            extractions=[
+                lx.data.Extraction(
+                    extraction_class="place",
+                    extraction_text="Verona",
+                    attributes={
+                        "normalized_place": "Verona",
+                        "entity_kind": "place",
+                        "place_granularity": "city",
+                        "is_real_world": "true",
+                        "should_keep": "true",
+                    },
+                ),
+            ],
+        ),
+        lx.data.ExampleData(
+            text="God keep us safe in Mantua.",
+            extractions=[
+                lx.data.Extraction(
+                    extraction_class="place",
+                    extraction_text="Mantua",
+                    attributes={
+                        "normalized_place": "Mantua",
+                        "entity_kind": "place",
+                        "place_granularity": "city",
+                        "is_real_world": "true",
+                        "should_keep": "true",
+                    },
+                ),
+            ],
+        ),
+        lx.data.ExampleData(
+            text="He rode from Rome across Italy.",
             extractions=[
                 lx.data.Extraction(
                     extraction_class="place",
                     extraction_text="Rome",
                     attributes={
                         "normalized_place": "Rome",
-                        "place_type": "city",
-                        "is_fictional": "false",
+                        "entity_kind": "place",
+                        "place_granularity": "city",
+                        "is_real_world": "true",
+                        "should_keep": "true",
                     },
                 ),
+            ],
+        ),
+        lx.data.ExampleData(
+            text="Meet me at Capel's monument in Verona.",
+            extractions=[
                 lx.data.Extraction(
                     extraction_class="place",
-                    extraction_text="Italy",
+                    extraction_text="Verona",
                     attributes={
-                        "normalized_place": "Italy",
-                        "place_type": "country",
-                        "is_fictional": "false",
+                        "normalized_place": "Verona",
+                        "entity_kind": "place",
+                        "place_granularity": "city",
+                        "is_real_world": "true",
+                        "should_keep": "true",
                     },
                 ),
             ],

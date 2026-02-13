@@ -30,8 +30,13 @@ python scripts/run_play.py \
 
 Outputs:
 - `outputs/romeo_juliet_mentions.csv`
+- `outputs/romeo_juliet_rejections.csv`
 - `outputs/romeo_juliet_places.csv`
 - `outputs/romeo_juliet_map.html`
+
+Filtering policy:
+- Keep only settlement places (city/town/village/hamlet/municipality-like geocodes).
+- Reject countries, regions, landmarks/monuments, character names, and deity mentions.
 
 ## Tests
 

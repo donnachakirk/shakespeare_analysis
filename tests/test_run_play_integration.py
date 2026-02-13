@@ -10,11 +10,24 @@ import pandas as pd
 
 
 class FakeExtraction:
-    def __init__(self, text: str, start: int, end: int, normalized: str):
+    def __init__(
+        self,
+        text: str,
+        start: int,
+        end: int,
+        normalized: str,
+        place_granularity: str = "city",
+    ):
         self.extraction_text = text
         self.char_start = start
         self.char_end = end
-        self.attributes = {"normalized_place": normalized, "place_type": "city"}
+        self.attributes = {
+            "normalized_place": normalized,
+            "entity_kind": "place",
+            "place_granularity": place_granularity,
+            "is_real_world": "true",
+            "should_keep": "true",
+        }
         self.confidence = 0.9
 
 
@@ -97,14 +110,17 @@ def test_run_play_main_writes_outputs(tmp_path, monkeypatch):
     run_play.main()
 
     mentions_csv = tmp_path / "outputs" / "romeo_juliet_mentions.csv"
+    rejections_csv = tmp_path / "outputs" / "romeo_juliet_rejections.csv"
     places_csv = tmp_path / "outputs" / "romeo_juliet_places.csv"
     map_html = tmp_path / "outputs" / "romeo_juliet_map.html"
 
     assert mentions_csv.exists()
+    assert rejections_csv.exists()
     assert places_csv.exists()
     assert map_html.exists()
 
     mentions_df = pd.read_csv(mentions_csv)
+    rejections_df = pd.read_csv(rejections_csv)
     places_df = pd.read_csv(places_csv)
 
     assert len(mentions_df) == 3
@@ -114,6 +130,7 @@ def test_run_play_main_writes_outputs(tmp_path, monkeypatch):
     mantua_row = places_df[places_df["normalized_place"] == "Mantua"].iloc[0]
     assert int(verona_row["mention_count"]) == 2
     assert int(mantua_row["mention_count"]) == 1
+    assert len(rejections_df) == 0
 
 
 def test_run_play_requires_real_nominatim_identity(tmp_path, monkeypatch):
@@ -137,3 +154,68 @@ def test_run_play_requires_real_nominatim_identity(tmp_path, monkeypatch):
         assert False, "Expected ValueError for placeholder Nominatim identity"
     except ValueError as exc:
         assert "NOMINATIM_EMAIL" in str(exc)
+
+
+def test_run_play_rejects_country_and_person_like_mentions(tmp_path, monkeypatch):
+    repo_root = Path(__file__).resolve().parents[1]
+    run_play = load_run_play_module(repo_root)
+
+    play_text = "ACT I\nSCENE I\nFriar John\nItaly\nVerona\n"
+
+    monkeypatch.chdir(tmp_path)
+    args = argparse.Namespace(
+        play_id="romeo_juliet",
+        title="Romeo and Juliet",
+        gutenberg_url="https://example.org/romeo.txt",
+        model="gpt-4o-mini",
+        user_agent="shakespeare-geo/0.1 (test@example.com)",
+        nominatim_email="test@example.com",
+        output_dir="outputs",
+    )
+    monkeypatch.setattr(run_play, "parse_args", lambda: args)
+    monkeypatch.setattr(run_play, "fetch_gutenberg_text", lambda url: play_text)
+    monkeypatch.setattr(run_play, "strip_gutenberg_header_footer", lambda text: text)
+
+    def fake_extract_places(text: str, model_id: str):
+        assert text == play_text
+        assert model_id == "gpt-4o-mini"
+        return [
+            FakeExtraction("Friar John", 15, 25, "Friar John", place_granularity="city"),
+            FakeExtraction("Italy", 26, 31, "Italy", place_granularity="country"),
+            FakeExtraction("Verona", 32, 38, "Verona", place_granularity="city"),
+        ]
+
+    geocode_lookup = {
+        "Verona": {
+            "geocode_name": "Verona, Veneto, Italy",
+            "geocode_lat": 45.4384,
+            "geocode_lon": 10.9916,
+            "geocode_precision": "city",
+            "geocode_addresstype": "city",
+            "geocode_class": "place",
+            "geocode_id": "relation:44874",
+        },
+    }
+
+    monkeypatch.setattr(run_play, "extract_places", fake_extract_places)
+    monkeypatch.setattr(
+        run_play,
+        "geocode_place",
+        lambda query, session, user_agent, email, cache: geocode_lookup.get(query),
+    )
+    monkeypatch.setattr(
+        run_play,
+        "build_map",
+        lambda center_lat, center_lon, places, output_path: Path(output_path).write_text("ok"),
+    )
+
+    run_play.main()
+
+    mentions_df = pd.read_csv(tmp_path / "outputs" / "romeo_juliet_mentions.csv")
+    rejections_df = pd.read_csv(tmp_path / "outputs" / "romeo_juliet_rejections.csv")
+    places_df = pd.read_csv(tmp_path / "outputs" / "romeo_juliet_places.csv")
+
+    assert len(mentions_df) == 3
+    assert len(rejections_df) == 2
+    assert sorted(rejections_df["mention_text"].tolist()) == ["Friar John", "Italy"]
+    assert places_df["normalized_place"].tolist() == ["Verona"]

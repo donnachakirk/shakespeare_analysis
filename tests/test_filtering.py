@@ -48,3 +48,14 @@ def test_postfilter_accepts_city_and_rejects_country():
         )
         == "post_not_settlement_type"
     )
+
+
+def test_postfilter_accepts_administrative_city_relation():
+    assert (
+        postfilter_rejection_reason(
+            geocode_class="boundary",
+            geocode_type="administrative",
+            geocode_addresstype="city",
+        )
+        is None
+    )

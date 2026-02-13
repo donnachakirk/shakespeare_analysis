@@ -186,17 +186,22 @@ def postfilter_rejection_reason(
     if not geocode_type_norm and not geocode_addresstype_norm:
         return "geocode_missing_type"
 
-    if (
-        geocode_type_norm in EXCLUDED_GEOCODE_TYPES
-        or geocode_addresstype_norm in EXCLUDED_GEOCODE_TYPES
-    ):
-        return "post_not_settlement_type"
-
+    # Allow settlement addresstypes even when type is "administrative"
+    # (common for city relations in Nominatim).
     if (
         geocode_type_norm in SETTLEMENT_GEOCODE_TYPES
         or geocode_addresstype_norm in SETTLEMENT_GEOCODE_TYPES
     ):
         return None
+
+    if geocode_class_norm == "place" and geocode_type_norm == "administrative":
+        return None
+
+    if (
+        geocode_type_norm in EXCLUDED_GEOCODE_TYPES
+        or geocode_addresstype_norm in EXCLUDED_GEOCODE_TYPES
+    ):
+        return "post_not_settlement_type"
 
     if geocode_class_norm == "place" and geocode_type_norm in SETTLEMENT_GEOCODE_TYPES:
         return None
